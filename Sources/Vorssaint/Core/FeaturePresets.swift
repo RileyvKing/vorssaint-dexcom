@@ -127,8 +127,8 @@ extension AppFeature {
         case .notchMascot: return .periodic
         case .notchAccessories: return .periodic
         // Log changes arrive as file events; a timer keeps countdowns and
-        // limits current while the section is on.
-        case .notch, .notchCalendar, .notchLyrics, .notchLiveEqualizer, .notchAgents: return .periodic
+        // limits current while the section is on. Glucose polls once a minute.
+        case .notch, .notchCalendar, .notchLyrics, .notchLiveEqualizer, .notchAgents, .notchGlucose: return .periodic
         case .clipboardHistory, .urlCleaner, .extraBrightness,
              .monitorCPU, .monitorGPU, .monitorMemory,
              .monitorNetwork, .monitorDisk, .monitorPower, .connectedDevices:

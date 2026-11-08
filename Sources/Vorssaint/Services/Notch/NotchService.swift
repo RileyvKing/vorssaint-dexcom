@@ -546,15 +546,29 @@ final class NotchService: ObservableObject {
         NotchKeepAwakeSupport.showsActivity() && KeepAwakeManager.shared.isActive
     }
 
+    /// A fresh Dexcom reading leads the closed island, as its page says.
+    var hasGlucoseActivity: Bool {
+        GlucoseService.shared.showsActivity
+    }
+
     var compactActivity: NotchCompactActivity? {
         // A new song waiting for its notice is not drawn yet.
         activitySelection.current(available: awaitsTrackNotice ? compactActivities.filter { $0 != .music } : compactActivities)
     }
 
     var compactActivities: [NotchCompactActivity] {
-        NotchSupport.compactActivities(timer: hasTimerActivity, watch: hasWatchActivity, downloads: hasDownloadActivity,
-                                      agents: hasAgentActivity, calendar: hasCalendarActivity,
-                                      music: hasMusicActivity, keepAwake: hasKeepAwakeActivity)
+        var activities = NotchSupport.compactActivities(
+            timer: hasTimerActivity, watch: hasWatchActivity, downloads: hasDownloadActivity,
+            agents: hasAgentActivity, calendar: hasCalendarActivity,
+            music: hasMusicActivity, keepAwake: hasKeepAwakeActivity,
+            glucose: hasGlucoseActivity)
+        // Fresh glucose leads by default. Turned off, it keeps its place
+        // after the activities that were already there.
+        let priority = UserDefaults.standard.object(forKey: DefaultsKey.notchGlucosePriority) as? Bool ?? true
+        if !priority, let index = activities.firstIndex(of: .glucose) {
+            activities.append(activities.remove(at: index))
+        }
+        return activities
     }
 
     var showsCompactActivityPicker: Bool {
@@ -675,6 +689,7 @@ final class NotchService: ObservableObject {
             return geometry.compactDownloadGeometry(wing: NotchDownloadSupport.compactWing(for: name, in: geometry))
         case .agents: return geometry.compactAgentGeometry(wing: agentStripWing(in: geometry))
         case .watch: return geometry.compactWatchGeometry(wing: watchStripWing(in: geometry))
+        case .glucose: return geometry.compactGlucoseGeometry(wing: glucoseStripWing(in: geometry))
         case .calendar:
             return geometry.compactCalendarGeometry(wing: calendarStripWing(for: companion, in: geometry),
                                                     paired: companion != nil)
@@ -696,6 +711,22 @@ final class NotchService: ObservableObject {
             ]).width.rounded(.up)
         let inset = provisional.compactActivityEdgeInset(boxHeight: size * 0.72, radius: 0)
         return reading + inset + NotchTimerSupport.stripCameraGap
+    }
+
+    /// Glucose's right wing holds the reading and its arrow; the left still
+    /// holds only the drop. LOW and HIGH are measured as words, not shortened.
+    private func glucoseStripWing(in geometry: NotchGeometry) -> CGFloat {
+        let provisional = geometry.compactGlucoseGeometry(wing: GlucoseSupport.stripWingRange.lowerBound)
+        let reading = GlucoseService.shared.reading
+        let size = NotchTimerSupport.stripTextSize(height: provisional.compactActivityContentHeight)
+        let text = reading?.displayText ?? "---"
+        let textWidth = (text as NSString).size(withAttributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
+        ]).width.rounded(.up)
+        let arrow = reading?.trend?.symbol == nil
+            ? 0 : NotchCapsuleLayout.markSpacing + NotchCapsuleLayout.glucoseArrowWidth
+        let inset = provisional.compactActivityEdgeInset(boxHeight: size * 0.72, radius: 0)
+        return textWidth + arrow + inset + NotchTimerSupport.stripCameraGap
     }
 
     private func keepAwakeStripWing(in geometry: NotchGeometry) -> CGFloat {
@@ -1095,6 +1126,10 @@ final class NotchService: ObservableObject {
         case .watch:
             let watch = NotchWatchService.shared
             return layout.watchSurface(reading: watch.headline, thumbnail: watch.showsThumbnail, geometry: geometry)
+        case .glucose:
+            let reading = GlucoseService.shared.reading
+            return layout.glucoseSurface(reading: reading?.displayText ?? "--",
+                                         hasArrow: reading?.trend?.symbol != nil, geometry: geometry)
         case .keepAwake:
             let reading = KeepAwakeManager.shared.endDate.map {
                 NotchKeepAwakeSupport.compactText(until: $0, now: Date(), locale: Locale(identifier: language.rawValue))
@@ -1156,6 +1191,9 @@ final class NotchService: ObservableObject {
         // A watch keeps reading while the island is away, as on the lock
         // screen, and says so with a notification if it cannot show itself.
         NotchWatchService.shared.syncWithPreferences()
+        // A reading keeps its minute cadence too, so a stale one gives the
+        // closed island back without waiting for the next open.
+        GlucoseService.shared.syncWithPreferences()
         // Requested file work can continue while locked, but disabling its
         // feature must still cancel it before presentation resumes.
         NotchFileToolsService.shared.syncWithPreferences()
@@ -1274,6 +1312,7 @@ final class NotchService: ObservableObject {
         NotchTimerService.shared.stop()
         NotchAccessoryService.shared.stop()
         NotchWatchService.shared.stop()
+        GlucoseService.shared.stop()
         let cancelCapture = captureControlsCancel
         endCaptureControls()
         cancelCapture?()
@@ -4088,6 +4127,19 @@ final class NotchService: ObservableObject {
             let watch = NotchWatchService.shared
             Publishers.CombineLatest3(watch.$state.removeDuplicates(), watch.$headline.removeDuplicates(),
                                       watch.$preview.map { $0 != nil }.removeDuplicates())
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.syncMenuSpaceMonitoring()
+                    self?.objectWillChange.send()
+                    self?.refreshPresentation()
+                }.store(in: &subscriptions)
+        }
+        if modules.contains(.glucose) {
+            // A new reading, or the freshness running out, changes both the
+            // strip and which activity owns the closed island.
+            let glucose = GlucoseService.shared
+            Publishers.CombineLatest(glucose.$reading.removeDuplicates(),
+                                     glucose.$isFresh.removeDuplicates())
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] _ in
                     self?.syncMenuSpaceMonitoring()

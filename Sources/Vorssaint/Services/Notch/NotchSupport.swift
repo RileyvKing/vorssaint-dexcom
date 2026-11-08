@@ -7,7 +7,7 @@ import Foundation
 import CoreGraphics
 
 enum NotchModule: String, CaseIterable, Identifiable {
-    case controls, mixer, music, clipboard, captures, files, system, tools, calendar, notifications, timer, camera, downloads, scratchpad, agents, watch
+    case controls, mixer, music, clipboard, captures, files, system, tools, calendar, notifications, timer, camera, downloads, scratchpad, agents, watch, glucose
     var id: String { rawValue }
 
     var symbol: String {
@@ -31,6 +31,7 @@ enum NotchModule: String, CaseIterable, Identifiable {
         case .scratchpad: return "note.text"
         case .agents: return "sparkles"
         case .watch: return "eye"
+        case .glucose: return "drop.fill"
         }
     }
 
@@ -53,6 +54,7 @@ enum NotchModule: String, CaseIterable, Identifiable {
         case .scratchpad: return "p"
         case .agents: return "g"
         case .watch: return "o"
+        case .glucose: return "l"
         }
     }
 
@@ -76,6 +78,7 @@ enum NotchModule: String, CaseIterable, Identifiable {
         case .scratchpad: return AppFeature.scratchpad.isAvailable(in: defaults)
         case .agents: return AppFeature.notchAgents.isAvailable(in: defaults)
         case .watch: return AppFeature.notchWatch.isAvailable(in: defaults)
+        case .glucose: return AppFeature.notchGlucose.isAvailable(in: defaults)
         case .system:
             return [.monitorCPU, .monitorGPU, .monitorMemory, .monitorNetwork,
                     .monitorDisk, .monitorPower, .fanControl, .connectedDevices].contains { (feature: AppFeature) in
@@ -824,7 +827,7 @@ enum NotchMusicStripLayout {
 }
 
 enum NotchCompactActivity: String, Identifiable {
-    case timer, watch, downloads, agents, calendar, music, keepAwake
+    case timer, watch, downloads, agents, calendar, music, keepAwake, glucose
 
     var id: String { rawValue }
 
@@ -837,6 +840,7 @@ enum NotchCompactActivity: String, Identifiable {
         case .calendar: return FeatureStrings.notchCalendar(language).title
         case .music: return FeatureStrings.notch(language).music
         case .keepAwake: return Strings.localized(language).keepAwakeTitle
+        case .glucose: return FeatureStrings.notchGlucose(language).title
         }
     }
 
@@ -850,6 +854,7 @@ enum NotchCompactActivity: String, Identifiable {
         case .calendar: return .calendar
         case .music: return .music
         case .keepAwake: return .controls
+        case .glucose: return .glucose
         }
     }
 
@@ -1196,6 +1201,15 @@ enum NotchCapsuleLayout {
         let right = thumbnail ? NotchWatchSupport.thumbnailWidth
             : reading.isEmpty ? spinnerWidth : width(reading, font: levelFont)
         return surface(content: symbolWidth + spacing + right, maximum: Maximum.activity, geometry: geometry)
+    }
+
+    /// Glucose: its drop, the reading and, when the source reports one, the
+    /// trend arrow. LOW and HIGH are words, so they are measured as drawn.
+    static let glucoseArrowWidth: CGFloat = 11
+    static func glucoseSurface(reading: String, hasArrow: Bool, geometry: NotchGeometry) -> CGSize {
+        let arrow = hasArrow ? markSpacing + glucoseArrowWidth : 0
+        return surface(content: symbolWidth + spacing + width(reading, font: readingFont) + arrow,
+                       maximum: Maximum.activity, geometry: geometry)
     }
 
     /// Screen capture controls folded while an area is chosen: the tool and a chevron.
@@ -1799,11 +1813,14 @@ enum NotchSupport {
     /// Keep Awake comes last: a session can run all day, even more than
     /// music plays, and it only says that the Mac stays awake. A watch
     /// follows the timer: the person started both and is waiting on them.
+    /// Glucose leads while it is fresh, so it replaces music and agents by
+    /// default and gives the island back when the reading goes stale.
     static func compactActivities(timer: Bool, watch: Bool = false, downloads: Bool, agents: Bool,
-                                  calendar: Bool, music: Bool, keepAwake: Bool = false) -> [NotchCompactActivity] {
+                                  calendar: Bool, music: Bool, keepAwake: Bool = false,
+                                  glucose: Bool = false) -> [NotchCompactActivity] {
         let candidates: [(Bool, NotchCompactActivity)] = [
-            (timer, .timer), (watch, .watch), (downloads, .downloads), (agents, .agents),
-            (calendar, .calendar), (music, .music), (keepAwake, .keepAwake)
+            (glucose, .glucose), (timer, .timer), (watch, .watch), (downloads, .downloads),
+            (agents, .agents), (calendar, .calendar), (music, .music), (keepAwake, .keepAwake)
         ]
         return candidates.compactMap { $0.0 ? $0.1 : nil }
     }
@@ -1867,6 +1884,7 @@ enum NotchSupport {
                 && ($0 != .notifications || defaults.bool(forKey: DefaultsKey.notchNotificationsEnabled))
                 && ($0 != .agents || defaults.bool(forKey: DefaultsKey.notchAgentsEnabled))
                 && ($0 != .watch || defaults.bool(forKey: DefaultsKey.notchWatchEnabled))
+                && ($0 != .glucose || defaults.bool(forKey: DefaultsKey.notchGlucoseEnabled))
         }
     }
 
@@ -2575,6 +2593,19 @@ struct NotchGeometry: Equatable {
         compact.allowsActivityFooter = false
         return compact
     }
+    /// Glucose keeps its drop and its reading beside the camera, never below
+    /// it. LOW and HIGH are wider than a number, so the wing gives them the
+    /// room they need rather than shrinking the word.
+    func compactGlucoseGeometry(wing: CGFloat) -> NotchGeometry {
+        var compact = self
+        let room = compactSideRoom ?? 0
+        let range = GlucoseSupport.stripWingRange
+        let fitted = min(range.upperBound, max(range.lowerBound, wing.isFinite ? wing.rounded(.up) : 0))
+        compact.compactSideRoom = room.isFinite && room >= range.lowerBound ? min(fitted, room) : 0
+        compact.minimumCompactWidth = cameraWidth + fitted * 2
+        compact.allowsActivityFooter = false
+        return compact
+    }
     var musicStrip: CGSize {
         let preferred = min(max(layout == .spacious ? 520 : 440, cameraWidth + 88, minimumCompactWidth), screen.width - 24)
         let measuredRoom = compactSideRoom ?? 0
@@ -2791,7 +2822,7 @@ struct NotchGeometry: Equatable {
                 // Only the cards a person chose; a short set leaves a short island.
                 contentHeight = min(budget, agentsHeight.map { $0 > 0 ? $0 : NotchLayout.emptyHeight } ?? budget)
             // Lists and previews fill the chosen content budget.
-            case .mixer, .calendar, .clipboard, .captures, .files, .notifications, .downloads, .camera, .scratchpad, .watch:
+            case .mixer, .calendar, .clipboard, .captures, .files, .notifications, .downloads, .camera, .scratchpad, .watch, .glucose:
                 contentHeight = budget
             }
         }

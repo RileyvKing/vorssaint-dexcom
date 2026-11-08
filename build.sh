@@ -316,6 +316,7 @@ if (( TEST )); then
         Sources/Vorssaint/Services/Notch/NotchNotificationReaderCore.swift
         Sources/Vorssaint/Services/Notch/NotchCalendarSupport.swift
         Sources/Vorssaint/Services/Notch/NotchKeepAwakeSupport.swift
+        Sources/Vorssaint/Services/Glucose/GlucoseSupport.swift
         Sources/Vorssaint/Services/Notch/NotchSupport.swift
         Sources/Vorssaint/Services/Notch/NotchAudioLevelSupport.swift
         Sources/Vorssaint/Services/Notch/NotchVolumeKeyGate.swift
@@ -332,6 +333,7 @@ if (( TEST )); then
         Sources/Vorssaint/Services/Notch/NotchPlaybackCommand.swift
         Sources/Vorssaint/Services/Notch/NotchMusicCommandWriter.swift
         Sources/Vorssaint/Core/FeatureCatalog.swift
+        Sources/Vorssaint/Core/NotchGlucoseStrings.swift
         Sources/Vorssaint/Core/FeaturePresets.swift
         Sources/Vorssaint/Core/FeatureHubStrings.swift
         Sources/Vorssaint/Core/MixerScreenSharingStrings.swift

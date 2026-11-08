@@ -884,6 +884,13 @@ enum DefaultsKey {
     static let notchWatchEnabled = "notchWatchEnabled"
     static let notchWatchSound = "notchWatchSound"
     static let notchWatchCondition = "notchWatchCondition"
+    // Glucose: a Dexcom Share reading, shown while it is fresh.
+    static let notchGlucoseEnabled = "notchGlucoseEnabled"
+    static let notchGlucosePriority = "notchGlucosePriority" // takes the closed island while fresh
+    static let notchGlucoseRegion = "notchGlucoseRegion" // GlucoseRegion.rawValue
+    static let notchGlucoseLowThreshold = "notchGlucoseLowThreshold" // mg/dL, red below
+    static let notchGlucoseHighThreshold = "notchGlucoseHighThreshold" // mg/dL, yellow above
+    static let notchGlucoseCachedReading = "notchGlucoseCachedReading" // Data, for the first frame after launch
     static let notchCalendarEnabled = "notchCalendarEnabled"
     static let notchCalendarCountdown = "notchCalendarCountdown"
     static let notchCalendarCountdownLead = "notchCalendarCountdownLead" // minutes before a start, chosen events included
@@ -1522,6 +1529,12 @@ enum Defaults {
         DefaultsKey.notchWatchEnabled: true,
         DefaultsKey.notchWatchSound: true,
         DefaultsKey.notchWatchCondition: NotchWatchCondition.changes.rawValue,
+        DefaultsKey.notchGlucoseEnabled: true,
+        DefaultsKey.notchGlucosePriority: true,
+        DefaultsKey.notchGlucoseRegion: GlucoseRegion.us.rawValue,
+        DefaultsKey.notchGlucoseLowThreshold: GlucoseTargets.defaultLow,
+        DefaultsKey.notchGlucoseHighThreshold: GlucoseTargets.defaultHigh,
+        DefaultsKey.notchGlucoseCachedReading: Data(),
         DefaultsKey.notchEnabled: false,
         DefaultsKey.notchDisplay: NotchDisplay.automatic.rawValue,
         DefaultsKey.notchSilhouette: NotchSilhouette.capsule.rawValue,

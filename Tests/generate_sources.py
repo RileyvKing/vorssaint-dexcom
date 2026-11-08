@@ -1470,6 +1470,11 @@ def main():
                                                 "NotchSupport.routes(.track, in: ReviewDefaults.current)")
     music_visibility = music_visibility.replace("UserDefaults.standard", "ReviewDefaults.current!")
     music_visibility = music_visibility.replace("calendar: hasCalendarActivity", "calendar: false")
+    # Glucose is a real activity in the app; this suite only drives music.
+    music_visibility = music_visibility.replace("glucose: hasGlucoseActivity", "glucose: false")
+    music_visibility = music_visibility.replace(
+        "case .glucose: return geometry.compactGlucoseGeometry(wing: glucoseStripWing(in: geometry))",
+        "case .glucose: return geometry")
     music_visibility = music_visibility.replace("playback?.isPlaying == true)",
                                                 "playback?.isPlaying == true, in: ReviewDefaults.current)")
     music_visibility = music_visibility.replace("captureControls: captureControls != nil)",

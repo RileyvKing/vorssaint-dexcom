@@ -31,7 +31,7 @@ enum AppFeature: String, CaseIterable {
          commandBar, screenRecorder, wallpaper, killProcess, portManager
     // Dynamic Island, then its extensions
     case notch, notchCalendar, notchNotifications, notchGestures, notchTimer, notchAccessories, notchLyrics,
-         notchQueue, notchLiveEqualizer, notchDownloads, notchAgents, notchWatch, notchMascot
+         notchQueue, notchLiveEqualizer, notchDownloads, notchAgents, notchWatch, notchGlucose, notchMascot
     // System monitor, one entry per metric family (temperatures live with
     // their parent metric: CPU temp with CPU, battery temp with power).
     case monitorCPU, monitorGPU, monitorMemory, monitorNetwork, monitorDisk, monitorPower, connectedDevices, fanControl
@@ -119,7 +119,7 @@ extension AppFeature {
             return .tools
         case .notch, .notchCalendar, .notchNotifications, .notchGestures, .notchTimer, .notchAccessories,
              .notchLyrics, .notchQueue, .notchLiveEqualizer, .notchDownloads, .notchAgents, .notchWatch,
-             .notchMascot:
+             .notchGlucose, .notchMascot:
             return .dynamicIsland
         case .monitorCPU, .monitorGPU, .monitorMemory, .monitorNetwork, .monitorDisk, .monitorPower,
              .connectedDevices, .fanControl:
@@ -196,6 +196,7 @@ extension AppFeature {
         case .notchCalendar: return "calendar"
         case .notchAgents: return "sparkles"
         case .notchWatch: return "eye"
+        case .notchGlucose: return "drop.fill"
         case .notchMascot: return "face.smiling"
         case .notch: return "macbook"
         case .radialMenu: return "circle.grid.cross"
@@ -271,6 +272,7 @@ extension AppFeature {
         case .notchCalendar: return [DefaultsKey.notchCalendarEnabled]
         case .notchAgents: return [DefaultsKey.notchAgentsEnabled]
         case .notchWatch: return [DefaultsKey.notchWatchEnabled]
+        case .notchGlucose: return [DefaultsKey.notchGlucoseEnabled]
         case .notchMascot: return [DefaultsKey.notchMascotEnabled]
         case .notch: return [DefaultsKey.notchEnabled]
         case .radialMenu: return [DefaultsKey.radialMenuEnabled]
@@ -338,6 +340,9 @@ extension AppFeature {
         // Session logs and the saved limits sit in the home folder, outside
         // every protected location, and no sign-in or keychain item is used.
         case .notchAgents: return []
+        // It only asks Dexcom for the account's readings over HTTPS; the
+        // Keychain item needs no protected-resource grant.
+        case .notchGlucose: return []
         // It only draws, and hears of what happens from the island itself.
         case .notchMascot: return []
         // The bars read the player's own audio output, which macOS gates
@@ -485,6 +490,7 @@ extension AppFeature {
              .scratchpad, .commandBar, .screenRecorder,
              .notch, .notchCalendar, .notchNotifications, .notchGestures, .notchTimer, .notchAccessories,
              .notchLyrics, .notchQueue, .notchLiveEqualizer, .notchDownloads, .notchAgents, .notchWatch,
+             .notchGlucose,
              .monitorCPU, .monitorGPU, .monitorMemory, .monitorNetwork, .monitorDisk, .monitorPower,
              .connectedDevices:
             return true

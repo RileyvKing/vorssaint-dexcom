@@ -429,7 +429,7 @@ private struct NotchCapsuleCompanionMark: View {
                     NotchCapsuleCalendarStrip.clockMark(countdown, now: context.date)
                 }
             }
-        case .timer, .keepAwake, .watch:
+        case .timer, .keepAwake, .watch, .glucose:
             EmptyView()
         }
     }
@@ -528,8 +528,7 @@ struct NotchCapsuleDownloadStrip: View {
 
 /// A watched area: the eye, then what the area reads now, or the area
 /// itself when it holds no text.
-struct NotchCapsuleWatchStrip: View {
-    @ObservedObject var service: NotchService
+struct NotchCapsuleWatchStrip: View {    @ObservedObject var service: NotchService
     let size: CGSize
     /// Another display's capsule, when the island shows on every display.
     var displayGeometry: NotchGeometry? = nil
@@ -561,6 +560,54 @@ struct NotchCapsuleWatchStrip: View {
         .accessibilityLabel(FeatureStrings.notchWatch(l10n.language).title)
         .accessibilityValue(watch.headline)
         .accessibilityHint(FeatureStrings.notch(l10n.language).open)
+    }
+}
+
+/// A Dexcom reading in a floating capsule: the drop, the value and its
+/// direction, in one row from end to end.
+struct NotchCapsuleGlucoseStrip: View {
+    @ObservedObject var service: NotchService
+    let size: CGSize
+    /// Another display's capsule, when the island shows on every display.
+    var displayGeometry: NotchGeometry? = nil
+    @ObservedObject private var glucose = GlucoseService.shared
+    @ObservedObject private var l10n = L10n.shared
+    @AppStorage(DefaultsKey.notchGlucoseLowThreshold) private var lowThreshold = GlucoseTargets.defaultLow
+    @AppStorage(DefaultsKey.notchGlucoseHighThreshold) private var highThreshold = GlucoseTargets.defaultHigh
+
+    private var geometry: NotchGeometry { displayGeometry ?? service.geometry }
+    private var targets: GlucoseTargets { GlucoseTargets(low: lowThreshold, high: highThreshold) }
+    private var tint: Color { GlucoseText.tint(glucose.reading, targets: targets) }
+
+    var body: some View {
+        NotchCapsuleRow(size: size, geometry: geometry) {
+            HStack(spacing: CapsuleLayout.spacing) {
+                Image(systemName: NotchModule.glucose.symbol)
+                    .font(.system(size: CapsuleLayout.symbolSize, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .frame(width: CapsuleLayout.symbolWidth)
+                    .capsuleCentred(NotchModule.glucose.symbol)
+                    .accessibilityHidden(true)
+                HStack(spacing: CapsuleLayout.markSpacing) {
+                    Text(glucose.reading?.displayText ?? "--")
+                        .font(Font(CapsuleLayout.readingFont as CTFont))
+                        .monospacedDigit()
+                    if let symbol = glucose.reading?.trend?.symbol {
+                        Image(systemName: symbol)
+                            .font(.system(size: CapsuleLayout.readingFont.pointSize * 0.9, weight: .semibold))
+                            .accessibilityHidden(true)
+                    }
+                }
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .fixedSize()
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(FeatureStrings.notchGlucose(l10n.language).title)
+        .accessibilityValue(GlucoseText.accessibility(glucose.reading, targets: targets, language: l10n.language))
+        .accessibilityHint(FeatureStrings.notch(l10n.language).open)
+        .accessibilityIdentifier("notch.glucose")
     }
 }
 

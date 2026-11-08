@@ -71,6 +71,12 @@ struct NotchEditorStrings {
     let agentsSummary: String
     let watchSummary: String
 
+    /// Added after the shared fields, so adding another section did not mean
+    /// touching every language's initializer.
+    var glucoseSummary: String {
+        "Your Dexcom Share reading, with its trend arrow and the day’s shape."
+    }
+
     func enableFeature(_ title: String) -> String { String(format: enableFeatureFormat, title) }
     func enableSetting(_ title: String) -> String { String(format: enableSettingFormat, title) }
     func showPage(_ title: String) -> String { String(format: showPageFormat, title) }
@@ -94,6 +100,7 @@ struct NotchEditorStrings {
         case .scratchpad: return scratchpadSummary
         case .agents: return agentsSummary
         case .watch: return watchSummary
+        case .glucose: return glucoseSummary
         }
     }
 }

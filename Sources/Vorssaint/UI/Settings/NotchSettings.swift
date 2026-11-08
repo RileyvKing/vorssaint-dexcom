@@ -26,6 +26,8 @@ struct NotchSettings: View {
     @AppStorage(DefaultsKey.notchCalendarWeekNumbers) private var calendarWeekNumbers = false
     @AppStorage(DefaultsKey.notchAgentsEnabled) private var agentsEnabled = false
     @AppStorage(DefaultsKey.notchWatchEnabled) private var watchEnabled = true
+    @AppStorage(DefaultsKey.notchGlucoseEnabled) private var glucoseEnabled = true
+    @AppStorage(DefaultsKey.notchGlucosePriority) private var glucosePriority = true
     @AppStorage(DefaultsKey.notchLyricsEnabled) private var lyricsEnabled = true
     @AppStorage(DefaultsKey.notchLyricsOnline) private var lyricsOnline = false
     @AppStorage(DefaultsKey.notchBrowserCovers) private var browserCovers = false
@@ -133,7 +135,8 @@ struct NotchSettings: View {
          String(microphone), String(battery), String(clipboard), String(clipboardWindow), clipboardCardSize,
          String(capture), String(trackChange), captureAction, String(showInCaptures),
          String(returnHome), homeModule, String(opensActivity), String(scratchpad),
-         String(agentsEnabled), String(watchEnabled), String(keepAwakeActivity), String(shortcutEnabled)]
+         String(agentsEnabled), String(watchEnabled), String(keepAwakeActivity), String(shortcutEnabled),
+         String(glucoseEnabled), String(glucosePriority)]
     }
 
     private var access: Binding<NotchQuickAccessConfiguration> {
@@ -545,6 +548,9 @@ struct NotchSettings: View {
         case .watch:
             NotchWatchSettingsControls()
                 .toggleStyle(TrailingSwitchToggleStyle())
+        case .glucose:
+            NotchGlucoseSettingsControls(priority: $glucosePriority)
+                .toggleStyle(TrailingSwitchToggleStyle())
         case .mixer, .system, .tools:
             EmptyView()
         }
@@ -884,6 +890,7 @@ struct NotchSettings: View {
         case .scratchpad: return .scratchpad
         case .agents: return .notchAgents
         case .watch: return .notchWatch
+        case .glucose: return .notchGlucose
         }
     }
 
@@ -1057,6 +1064,7 @@ struct NotchSettings: View {
             (module != .timer || timerEnabled) && (module != .camera || cameraEnabled)
                 && (module != .calendar || calendarEnabled) && (module != .notifications || notificationsEnabled)
                 && (module != .agents || agentsEnabled) && (module != .watch || watchEnabled)
+                && (module != .glucose || glucoseEnabled)
                 && !hidden.split(separator: ",").contains(Substring(module.rawValue))
         } set: { shown in
             if module == .timer { timerEnabled = shown }
@@ -1065,6 +1073,7 @@ struct NotchSettings: View {
             if module == .notifications { notificationsEnabled = shown }
             if module == .agents { agentsEnabled = shown }
             if module == .watch { watchEnabled = shown }
+            if module == .glucose { glucoseEnabled = shown }
             var values = Set(hidden.split(separator: ",").map(String.init))
             if shown { values.remove(module.rawValue) } else { values.insert(module.rawValue) }
             hidden = values.sorted().joined(separator: ",")
