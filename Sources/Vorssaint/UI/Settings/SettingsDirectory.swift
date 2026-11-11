@@ -246,6 +246,7 @@ enum SettingsDirectory {
         let notchMusic = FeatureStrings.notchMusicExtras(language)
         let notchCalendar = FeatureStrings.notchCalendar(language)
         let notchAgents = FeatureStrings.notchAgents(language)
+        let notchGlucose = FeatureStrings.notchGlucose(language)
         let notchLowBattery = NotchLowBatteryStrings.localized(language)
         var liquidGlass: [String] = []
 #if compiler(>=6.2)
@@ -292,6 +293,8 @@ enum SettingsDirectory {
             .init([notchAgents.limitAt], feature: .notchAgents, notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsLimitAlert)),
             .init([FeatureStrings.claudeAccount(language).title], feature: .notchAgents,
                   notch: .module(.agents), when: state.on(DefaultsKey.notchAgentsClaude)),
+            .init([notchGlucose.region, notchGlucose.lowThreshold, notchGlucose.highThreshold],
+                  feature: .notchGlucose, notch: .module(.glucose)),
             .init([notchEditor.activity, notchEditor.resting, notch.coverMenus, notchEditor.feedback, notch.inputSource,
                    notch.newTrack, lockScreen.title, lockScreen.sounds, lockScreen.show], notch: .activity),
             .init([notchLowBattery.title], feature: .monitorPower, notch: .activity, when: batteryRest),
